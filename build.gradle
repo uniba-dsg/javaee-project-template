@@ -1,0 +1,62 @@
+allprojects {
+    apply plugin: 'idea'
+    apply plugin: 'eclipse'
+
+    repositories {
+        mavenCentral()
+        jcenter()
+    }
+}
+
+task wrapper(type: Wrapper) {
+    gradleVersion = '3.1'
+}
+
+// old ant glassfish tasks
+ant.importBuild 'build.xml'
+
+project(':ear') {
+    apply plugin: 'ear'
+
+    dependencies {
+        // The following dependencies will be the ear modules and
+        // will be placed in the ear root
+        deploy project(path: ':frontend', configuration: 'archives')
+        deploy project(':backend')
+
+        // All libraries used by the modules must be included as EAR libraries
+        earlib project(':shared')
+    }
+
+    ear {
+        archiveName "${rootProject.name}.ear"
+
+        deploymentDescriptor {
+            applicationName = "BeverageStore"
+        }
+    }
+}
+
+project(':shared') {
+    apply plugin: 'java'
+}
+
+project(':frontend') {
+    apply plugin: 'war'
+
+    dependencies {
+        // not added to the archive must be inside the EAR classpath
+        providedCompile project(':shared')
+        providedCompile group: 'javax', name: 'javaee-api', version: '7.0'
+    }
+}
+
+project(':backend') {
+    apply plugin: 'java'
+
+    dependencies {
+        // not added to the archive must be inside the EAR classpath
+        compile project(':shared')
+        compile group: 'javax', name: 'javaee-api', version: '7.0'
+    }
+}

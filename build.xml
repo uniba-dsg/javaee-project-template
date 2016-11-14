@@ -1,0 +1,123 @@
+<project name="glassfish" default="all" basedir=".">
+
+    <!-- Configure your environment in this file -->
+    <property file="ant.properties"/>
+
+    <!-- App Server Targets -->
+    <presetdef name="asadmin">
+        <java jar="${javaee.home}/modules/admin-cli.jar" fork="true" jvm="${java.home}/bin/java">
+            <arg line="--port ${javaee.adminserver.port} --user admin --passwordfile passfile"/>
+        </java>
+    </presetdef>
+
+    <target name="start-glassfish">
+        <asadmin failonerror="true">
+            <arg value="start-domain"/>
+        </asadmin>
+        <waitfor>
+            <http url="http://${javaee.server.name}:${javaee.server.port}"/>
+        </waitfor>
+    </target>
+
+    <target name="stop-glassfish">
+        <asadmin failonerror="true">
+            <arg line="stop-domain"/>
+        </asadmin>
+    </target>
+
+    <target name="restart-glassfish" depends="stop-glassfish, start-glassfish"/>
+
+    <target name="deploy">
+        <asadmin failonerror="true">
+            <arg value="deploy"/>
+            <arg value="--force=true"/>
+            <arg value="ear/build/libs/${app.name}.ear"/>
+        </asadmin>
+    </target>
+
+    <target name="undeploy">
+        <asadmin failonerror="true">
+            <arg value="undeploy"/>
+            <arg value="${app.name}"/>
+        </asadmin>
+    </target>
+
+    <target name="redeploy" depends="undeploy,deploy"/>
+
+    <!-- JMS Targets -->
+    <target name="create-jms-resource">
+        <asadmin failonerror="true">
+            <arg line="create-jms-resource"/>
+            <arg line=" --restype ${jms.restype}"/>
+            <arg line=" --enabled=true"/>
+            <arg line=" --property ${jms.resource.property}"/>
+            <arg line=" ${jms.resource.name}"/>
+        </asadmin>
+    </target>
+
+    <target name="delete-jms-resource">
+        <asadmin failonerror="false">
+            <arg line="delete-jms-resource"/>
+            <arg line=" ${jms.resource.name}"/>
+        </asadmin>
+    </target>
+
+    <!-- JDBC Targets -->
+    <target name="create-jdbc-connection-pool">
+        <asadmin failonerror="true">
+            <arg line=" create-jdbc-connection-pool"/>
+            <arg line=" --datasourceclassname ${db.datasource}"/>
+            <arg line=" --restype javax.sql.XADataSource "/>
+            <arg line=" --property portNumber=${db.port}:serverName=${db.server.name}:User=${db.user}:Password=${db.password}:databaseName=${db.name}"/>
+            <arg line=" ${jdbc.connectionpool.name} "/>
+        </asadmin>
+    </target>
+
+    <target name="create-jdbc-resource">
+        <asadmin failonerror="true">
+            <arg line="create-jdbc-resource"/>
+            <arg line=" --connectionpoolid ${jdbc.connectionpool.name}"/>
+            <arg line=" --enabled=true"/>
+            <arg line=" ${jdbc.resource.name}"/>
+        </asadmin>
+    </target>
+
+    <target name="delete-jdbc-connection-pool">
+        <asadmin failonerror="false">
+            <arg line="delete-jdbc-connection-pool"/>
+            <arg line=" ${jdbc.connectionpool.name}"/>
+        </asadmin>
+    </target>
+
+    <target name="delete-jdbc-resource">
+        <asadmin failonerror="false">
+            <arg line="delete-jdbc-resource"/>
+            <arg line=" ${jdbc.resource.name}"/>
+        </asadmin>
+    </target>
+
+    <!-- Build Targets -->
+    <target name="init">
+        <antcall target="create-jms-resource">
+            <param name="jms.restype" value="javax.jms.Queue"/>
+            <param name="jms.resource.property" value="Name=PhysicalQueue"/>
+            <param name="jms.resource.name" value="${app.jms.queue}"/>
+        </antcall>
+
+        <antcall target="create-jms-resource">
+            <param name="jms.restype" value="javax.jms.QueueConnectionFactory"/>
+            <param name="jms.resource.property" value="transaction-support=XATransaction"/>
+            <param name="jms.resource.name" value="${app.jms.factory}"/>
+        </antcall>
+
+        <antcall target="create-jdbc-connection-pool">
+            <param name="jdbc.connectionpool.name" value="${app.jdbc.connectionpool}"/>
+        </antcall>
+
+        <antcall target="create-jdbc-resource">
+            <param name="jdbc.connectionpool.name" value="${app.jdbc.connectionpool}"/>
+            <param name="jdbc.resource.name" value="${app.jdbc.resource}"/>
+        </antcall>
+    </target>
+
+</project>

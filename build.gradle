@@ -32,7 +32,7 @@ project(':ear') {
         archiveName "${rootProject.name}.ear"
 
         deploymentDescriptor {
-            applicationName = "BeverageStore"
+            applicationName = ${rootProject.name}
         }
     }
 }

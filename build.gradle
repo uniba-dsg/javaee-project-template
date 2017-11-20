@@ -8,10 +8,6 @@ allprojects {
     }
 }
 
-task wrapper(type: Wrapper) {
-    gradleVersion = '3.1'
-}
-
 // old ant glassfish tasks
 ant.importBuild 'build.xml'
 
@@ -47,7 +43,7 @@ project(':frontend') {
     dependencies {
         // not added to the archive must be inside the EAR classpath
         providedCompile project(':shared')
-        providedCompile group: 'javax', name: 'javaee-api', version: '7.0'
+        providedCompile group: 'javax', name: 'javaee-api', version: '8.0'
     }
 }
 
@@ -57,6 +53,6 @@ project(':backend') {
     dependencies {
         // not added to the archive must be inside the EAR classpath
         compile project(':shared')
-        compile group: 'javax', name: 'javaee-api', version: '7.0'
+        compile group: 'javax', name: 'javaee-api', version: '8.0'
     }
 }

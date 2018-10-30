@@ -8,9 +8,6 @@ allprojects {
     }
 }
 
-// old ant glassfish tasks
-ant.importBuild 'build.xml'
-
 project(':ear') {
     apply plugin: 'ear'
 
@@ -22,6 +19,8 @@ project(':ear') {
 
         // All libraries used by the modules must be included as EAR libraries
         earlib project(':shared')
+        earlib group: 'org.jfree', name: 'jfreechart', version: '1.0.14', ext: 'jar'
+        earlib group: 'org.jfree', name: 'jcommon', version: '1.0.17',ext:'jar'
     }
 
     ear {
@@ -33,9 +32,11 @@ project(':ear') {
     }
 }
 
+
 project(':shared') {
     apply plugin: 'java'
 }
+
 
 project(':frontend') {
     apply plugin: 'war'
@@ -44,6 +45,8 @@ project(':frontend') {
         // not added to the archive must be inside the EAR classpath
         providedCompile project(':shared')
         providedCompile group: 'javax', name: 'javaee-api', version: '8.0'
+        compile group: 'org.jfree', name: 'jfreechart', version: '1.0.14'
+        compile group: 'org.jfree', name: 'jcommon', version: '1.0.17'
     }
 }
 
@@ -56,3 +59,194 @@ project(':backend') {
         compile group: 'javax', name: 'javaee-api', version: '8.0'
     }
 }
+
+
+
+apply plugin: 'java'
+
+task startGlassfish(dependsOn:jar) {
+	doLast {
+		javaexec { 
+		main="-jar";
+		args = [
+            javaeeHome + "/modules/admin-cli.jar", "--port",  
+            javaeeAdminserverPort, "start-domain"]
+            
+		}
+		String url = "http://" +javaeeServerName + ":" + javaeeServerPort
+        println "${url} is up!"
+	} 
+}
+
+task stopGlassfish(dependsOn:jar) {
+	doLast {
+		javaexec { 
+		main="-jar";
+		args = [
+            javaeeHome + "/modules/admin-cli.jar", "--port",  
+            javaeeAdminserverPort, "stop-domain"]
+		}
+	} 
+}
+
+task restartGlassfish(dependsOn: ['stopGlassfish', 'startGlassfish']) {
+	doLast {
+	} 
+}
+startGlassfish.mustRunAfter stopGlassfish
+
+
+task deploy(dependsOn:jar) {
+	doLast {
+		javaexec { 
+		main="-jar";
+		args = [
+            javaeeHome + "/modules/admin-cli.jar", "--port",  
+            javaeeAdminserverPort, "deploy", "--force=true", 
+            "ear/build/libs/" + appName + ".ear"]           
+		}
+	} 
+}
+
+task undeploy(dependsOn:jar) {
+	doLast {
+		javaexec { 
+		main="-jar";
+		args = [
+            javaeeHome + "/modules/admin-cli.jar", "--port",  
+            javaeeAdminserverPort, "undeploy", appName] 
+		}
+	} 
+}
+
+task redeploy(dependsOn: ['deploy', 'undeploy']) {
+	doLast {
+	} 
+}
+deploy.mustRunAfter undeploy
+
+
+task createJMSResourceQueue(dependsOn:jar) {
+	doLast {
+		javaexec { 
+		main="-jar";
+		args = [
+            javaeeHome + "/modules/admin-cli.jar", "--port",  
+            javaeeAdminserverPort, "create-jms-resource", "--restype", 
+            "javax.jms.Queue", "--enabled=true", "--property", 
+            "Name=PhysicalQueue", appJmsQueue] 
+		}
+	} 
+}
+
+task deleteJMSResourceQueue(dependsOn:jar){
+	doLast {
+		javaexec {
+		main="-jar";
+		args = [
+            javaeeHome + "/modules/admin-cli.jar", "--port",  
+            javaeeAdminserverPort, "delete-jms-resource", 
+            appJmsQueue] 
+		}
+	}
+}
+
+task createJMSResourceFactory(dependsOn:jar) {
+	doLast {
+		javaexec { 
+		main="-jar";
+		args = [
+            javaeeHome + "/modules/admin-cli.jar", "--port",  
+            javaeeAdminserverPort, "create-jms-resource", "--restype", 
+            "javax.jms.QueueConnectionFactory", "--enabled=true", "--property", 
+            "transaction-support=XATransaction", appJmsFactory] 
+		}
+	} 
+}
+
+task deleteJMSResourceFactory(dependsOn:jar){
+	doLast {
+		javaexec {
+		main="-jar";
+		args = [
+            javaeeHome + "/modules/admin-cli.jar", "--port",  
+            javaeeAdminserverPort, "delete-jms-resource", 
+            appJmsFactory] 
+		}
+	}
+}
+
+
+
+task createJDBCConnectionPool(dependsOn:jar) {
+	doLast {
+		javaexec { 
+		main="-jar";
+		args = [
+            javaeeHome + "/modules/admin-cli.jar", "--port",  
+            javaeeAdminserverPort, "create-jdbc-connection-pool", 
+            "--datasourceclassname" , dbDatasource, 
+            "--restype", "javax.sql.XADataSource", 
+            "--property", "portNumber=" + dbPort + ":serverName=" + 
+            dbServerName + ":User=" + dbUser + ":Password=" + 
+            dbPassword + ":databaseName=" + dbName, 
+            appJdbcConnectionpool
+            ] 
+		}
+	} 
+}
+
+task deleteJDBCConnectionPool(dependsOn:jar) {
+	doLast {
+		javaexec { 
+		main="-jar";
+		args = [
+            javaeeHome + "/modules/admin-cli.jar", "--port",  
+            javaeeAdminserverPort, "delete-jdbc-connection-pool", 
+            appJdbcConnectionpool
+            ] 
+		}
+	} 
+}
+
+task createJDBCResource(dependsOn:jar) {
+	doLast {
+		javaexec { 
+		main="-jar";
+		args = [
+            javaeeHome + "/modules/admin-cli.jar", "--port",  
+            javaeeAdminserverPort, "create-jdbc-resource", 
+            "--connectionpoolid", appJdbcConnectionpool, 
+            "--enabled=true", appJdbcResource
+            ] 
+		}
+	} 
+}
+
+createJDBCResource.mustRunAfter deleteJDBCConnectionPool
+
+
+task deleteJDBCResource(dependsOn:jar) {
+	doLast {
+		javaexec { 
+		main="-jar";
+		args = [
+            javaeeHome + "/modules/admin-cli.jar", "--port",  
+            javaeeAdminserverPort, "delete-jdbc-resource", 
+            appJdbcResource
+            ] 
+		}
+	} 
+}
+
+
+task initServer(dependsOn: ['createJMSResourceQueue',
+'createJMSResourceFactory','createJDBCConnectionPool',
+'createJDBCResource']){
+	doLast{
+		println 'initializing'
+	}
+}
+createJDBCResource.mustRunAfter createJDBCConnectionPool
+
+

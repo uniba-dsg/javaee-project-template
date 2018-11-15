@@ -223,8 +223,6 @@ task createJDBCResource(dependsOn:jar) {
 	} 
 }
 
-createJDBCResource.mustRunAfter deleteJDBCConnectionPool
-
 
 task deleteJDBCResource(dependsOn:jar) {
 	doLast {
